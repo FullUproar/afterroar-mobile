@@ -33,6 +33,13 @@ const config: CapacitorConfig = {
     // in AndroidManifest later.
     backgroundColor: "#0a0a0a",
   },
+  plugins: {
+    // Route fetch() through native HTTP (bypasses CORS for cross-origin
+    // calls from R2 sync logic to afterroar.store / afterroar.me).
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
 };
 
 export default config;
