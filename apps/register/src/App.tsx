@@ -1,98 +1,169 @@
 /**
- * R1 shell — when the Capacitor app is launched and `server.url` is reachable,
- * the WebView loads the live register at afterroar.store/dashboard/register
- * and this component never renders. This shell is only what users see when
- * `server.url` IS unreachable (e.g. local dev with `cap run android` while
- * offline, or during the brief moment before the WebView has loaded).
+ * Register R2 — top-level app state machine.
  *
- * R2 will replace this with the actual register UI implemented natively.
- * The offline-capable register lives here, not at the live URL.
+ *   Setup → Login → Home (with Settings reachable from Home)
+ *
+ * Mode (online / ops-down / offline) is detected on a 30s interval and
+ * also on online/offline browser events. The sync loop runs continuously
+ * once setup is complete, pushing pending events whenever connectivity
+ * permits.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Network } from "@capacitor/network";
+import { getServerConfig, getDeviceId } from "./device";
+import { detectMode } from "./api";
+import { startSyncLoop, refreshPendingCount } from "./sync";
+import { Setup } from "./screens/Setup";
+import { Login } from "./screens/Login";
+import { Home } from "./screens/Home";
+import { Settings } from "./screens/Settings";
+import { Screen, H1 } from "./ui";
+import type { ServerConfig, Staff, ConnectionMode } from "./types";
+
+type View = "loading" | "setup" | "login" | "home" | "settings";
+
+const MODE_POLL_MS = 30_000;
 
 export function App() {
-  const [retryCount, setRetryCount] = useState(0);
+  const [view, setView] = useState<View>("loading");
+  const [cfg, setCfg] = useState<ServerConfig | null>(null);
+  const [staff, setStaff] = useState<Staff | null>(null);
+  const [mode, setMode] = useState<ConnectionMode>("offline");
+  const cfgRef = useRef<ServerConfig | null>(null);
+  cfgRef.current = cfg;
 
+  // Boot — load config, decide what screen to show
   useEffect(() => {
-    // Soft auto-reload when the network comes back, in case we're stuck on
-    // the shell because the WebView's `server.url` was unreachable at boot.
-    const onOnline = () => {
-      setRetryCount((n) => n + 1);
-      window.location.reload();
-    };
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
+    void (async () => {
+      // Make sure device ID exists before anything else
+      await getDeviceId();
+      const stored = await getServerConfig();
+      setCfg(stored);
+      setView(stored ? "login" : "setup");
+      // Initial mode probe
+      void detectMode(stored).then(setMode);
+      // Pending event count for the badge
+      void refreshPendingCount();
+    })();
   }, []);
 
+  // Mode polling — every 30s, and on network state changes
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      if (cancelled) return;
+      const m = await detectMode(cfgRef.current);
+      if (!cancelled) setMode(m);
+    };
+    void poll();
+    const id = setInterval(poll, MODE_POLL_MS);
+    const handle = Network.addListener("networkStatusChange", () => void poll());
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      void handle.then((h) => h.remove());
+    };
+  }, []);
+
+  // Sync loop starts as soon as we have a config
+  useEffect(() => {
+    if (!cfg) return;
+    startSyncLoop(() => cfgRef.current);
+  }, [cfg]);
+
+  if (view === "loading") {
+    return (
+      <Screen>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <H1>…</H1>
+        </div>
+      </Screen>
+    );
+  }
+
+  if (view === "setup" || !cfg) {
+    return (
+      <Setup
+        onDone={async () => {
+          const stored = await getServerConfig();
+          setCfg(stored);
+          setView("login");
+          void detectMode(stored).then(setMode);
+        }}
+      />
+    );
+  }
+
+  if (view === "login" || !staff) {
+    return (
+      <Login
+        onSignedIn={(s) => {
+          setStaff(s);
+          setView("home");
+        }}
+      />
+    );
+  }
+
+  if (view === "settings") {
+    return (
+      <Settings
+        cfg={cfg}
+        mode={mode}
+        onBack={() => setView("home")}
+        onResetDevice={() => {
+          setCfg(null);
+          setStaff(null);
+          setView("setup");
+        }}
+      />
+    );
+  }
+
   return (
-    <main
+    <>
+      <ModeBanner mode={mode} />
+      <Home
+        staff={staff}
+        cfg={cfg}
+        mode={mode}
+        onSignOut={() => {
+          setStaff(null);
+          setView("login");
+        }}
+        onSettings={() => setView("settings")}
+      />
+    </>
+  );
+}
+
+/** Sticky banner at the very top of Home when we're not in 'online' mode. */
+function ModeBanner({ mode }: { mode: ConnectionMode }) {
+  if (mode === "online") return null;
+  const isOffline = mode === "offline";
+  const bg = isOffline ? "rgba(239, 68, 68, 0.15)" : "rgba(251, 191, 36, 0.15)";
+  const fg = isOffline ? "#ef4444" : "#fbbf24";
+  return (
+    <div
       style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "1.5rem",
-        padding: "2rem",
-        background:
-          "radial-gradient(ellipse at top, rgba(255, 130, 0, 0.15), transparent 60%), #0a0a0a",
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        background: bg,
+        borderBottom: `1px solid ${fg}40`,
+        padding: "0.5rem 1rem",
         textAlign: "center",
+        color: fg,
+        fontWeight: 800,
+        fontSize: "0.85rem",
+        letterSpacing: "0.04em",
       }}
     >
-      <div
-        style={{
-          width: "4rem",
-          height: "4rem",
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #FF8200, #FBDB65)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "1.5rem",
-          fontWeight: 900,
-          color: "#0a0a0a",
-        }}
-      >
-        AR
-      </div>
-      <h1
-        style={{
-          fontSize: "1.5rem",
-          fontWeight: 800,
-          color: "#FBDB65",
-          margin: 0,
-        }}
-      >
-        Afterroar Register
-      </h1>
-      <p
-        style={{
-          color: "#9ca3af",
-          fontSize: "0.95rem",
-          maxWidth: "24rem",
-          lineHeight: 1.55,
-          margin: 0,
-        }}
-      >
-        Connecting to Store Ops…
-      </p>
-      <p
-        style={{
-          color: "#6b7280",
-          fontSize: "0.78rem",
-          letterSpacing: "0.04em",
-          margin: 0,
-        }}
-      >
-        If this screen persists, your device may be offline. R2 will keep the
-        register usable in this state.
-      </p>
-      {retryCount > 0 && (
-        <p style={{ color: "#10b981", fontSize: "0.78rem", margin: 0 }}>
-          Network detected — retrying…
-        </p>
-      )}
-    </main>
+      {isOffline
+        ? "● OFFLINE — sales queue locally and sync when service returns"
+        : "● STORE OPS UNREACHABLE — sales queue locally; sync queued"}
+    </div>
   );
 }

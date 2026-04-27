@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Garmr</string>
+    <string name="title_activity_main">Garmr</string>
+    <string name="package_name">me.afterroar.garmr</string>
+    <string name="custom_url_scheme">me.afterroar.garmr</string>
+</resources>

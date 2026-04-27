@@ -4,40 +4,26 @@ const config: CapacitorConfig = {
   appId: "me.afterroar.register",
   appName: "Afterroar Register",
   webDir: "dist",
-  // R1: WebView loads the deployed web register directly. Local React app is
-  // a thin shell that only takes over for offline detection and (later)
-  // native bridges.
-  //
-  // R2 will:
-  //   - Remove `server.url` so the app loads its own bundled SPA
-  //   - Move register UI code into apps/register/src instead of pointing
-  //     at the live URL
-  //   - Add @capacitor-community/sqlite for the local event log
-  //   - Add @capacitor-community/stripe-terminal for native card capture
-  server: {
-    url: "https://www.afterroar.store/dashboard/register",
-    androidScheme: "https",
-    // Allow navigation to OAuth providers and Stripe, otherwise WebView
-    // refuses to leave the original origin during sign-in flows.
-    allowNavigation: [
-      "*.afterroar.store",
-      "*.afterroar.me",
-      "*.fulluproar.com",
-      "accounts.google.com",
-      "*.stripe.com",
-    ],
-  },
+  // R2: register is now a real local SPA (no more server.url WebView wrap).
+  // The whole point of R2 is offline-capable cashier flows; loading
+  // afterroar.store inside the WebView would defeat that. UI runs locally,
+  // talks to the server only via /api/sync.
   android: {
-    // Lock to portrait — register is a counter/tablet app, not a landscape
-    // media app. Setting this here means we don't have to wrestle with it
-    // in AndroidManifest later.
     backgroundColor: "#0a0a0a",
   },
   plugins: {
-    // Route fetch() through native HTTP (bypasses CORS for cross-origin
-    // calls from R2 sync logic to afterroar.store / afterroar.me).
     CapacitorHttp: {
+      // fetch() routes through native Android HTTP — bypasses CORS for
+      // cross-origin calls to afterroar.store/api/sync.
       enabled: true,
+    },
+    CapacitorSQLite: {
+      androidIsEncryption: false,
+      // We don't encrypt the local SQLite for now. Cashier-side card data
+      // never lives in our SQLite (Stripe Terminal SDK manages its own
+      // encrypted offline cache when we get to R3). What lives in our
+      // SQLite is inventory + staff PINs (already hashed) + sale events
+      // (no PAN data). Acceptable for v1.
     },
   },
 };

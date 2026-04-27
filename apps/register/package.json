@@ -13,10 +13,12 @@
     "android:run": "npm run build && cap sync android && cap run android"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^6.0.0",
     "@capacitor/android": "^6.1.0",
     "@capacitor/app": "^6.0.0",
     "@capacitor/core": "^6.1.0",
     "@capacitor/network": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
