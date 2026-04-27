@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Capacitor — generated, regeneratable, mostly gitignored
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+android/captures/
+android/app/src/main/assets/public/
+
+ios/App/build/
+ios/App/Pods/
+ios/App/public/
+ios/App/output/
+ios/.cxx/
+
+# Signing — NEVER commit
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+android/app/release/keystore.properties
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.log
+Thumbs.db
+
+# Claude / AI tooling
+.claude/
