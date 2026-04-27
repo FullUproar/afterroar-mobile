@@ -35,13 +35,13 @@ Garmr is slotted between R2 and R3 — when we're waiting on Apple to approve th
 ## What's needed for iOS (when we get to R3)
 
 1. **Apple Developer Program** account — $99/year, 1–3 days for identity verification on first signup. Start the enrollment when R3 is on the immediate horizon, not before.
-2. **macOS for builds.** Xcode is macOS-only, no Windows path. Three options:
-   - **Codemagic free tier** — cloud Mac CI, 500 build minutes/month free. Enough for early R3 work (~30–50 build minutes total to get the first build working). $0 up front.
-   - **Mac mini (M4 base, ~$599)** — purchase decision when Codemagic free tier feels constraining. Lives on a shelf; SSH/Screen Share when needed.
-   - **MacBook Air (M3, ~$999)** — only if you'd actually use it as a portable laptop. Overkill for just-builds.
+2. **Cloud Mac CI for builds.** Xcode is macOS-only and no Windows path exists, but for our usage profile (occasional iOS builds, ≤15/month at R3 cadence), **buying a Mac is wasted capital**. Use cloud:
+   - **Codemagic** — best fit. Capacitor-friendly, 500 free build-minutes/month (about 25–40 iOS builds depending on size), $0.038/min after. Most R3 development fits in the free tier.
+   - **GitHub Actions macOS runners** — already in the CI ecosystem we use for Android. Less generous on free minutes but most convenient if we want one workflow file managing both platforms. ~$0.16/min on paid tier.
+   - **Bitrise** — established alternative, 200 free min/mo. Fine if Codemagic is unavailable.
 3. **iPhone for real-device testing.** Cannot build iOS apps *on* an iPhone (Xcode is macOS-only), but can deploy builds to one for testing. Any modern iPhone works.
 
-**Recommended path**: Codemagic free tier for R3 development → buy a Mac mini if/when builds get frequent enough that Codemagic gets in the way. Don't buy the Mac up front; buy the iPhone when convenient.
+**Recommended path**: Codemagic free tier covers all of R3 development. If/when build volume genuinely outgrows it (months of regular iOS work, multiple developers), revisit. **Do not buy a Mac up front.** Buy the iPhone when convenient — different purchase, different reason (testing, not building).
 
 ## Stripe Terminal architecture decision (R2/R3)
 

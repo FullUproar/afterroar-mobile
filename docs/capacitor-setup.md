@@ -94,9 +94,7 @@ When R3 starts:
 
 1. **Apple Developer Program enrollment** — $99/yr, 1–3 day verification. Start this **first** because it's not gated on code.
 2. **Add iOS to the Capacitor project**: `cd apps/register && npx cap add ios`. Generates `ios/` directory.
-3. **Build setup**:
-   - Either: Mac mini purchase, install Xcode, configure local development.
-   - Or: Codemagic free tier, configure `codemagic.yaml` for iOS builds, push and let Codemagic build remotely.
+3. **Build setup — cloud Mac CI** (no Mac purchase planned). Configure `codemagic.yaml` at the repo root with an iOS workflow per app. Codemagic free tier (500 min/mo) is enough for early R3 development. Build artifacts (signed `.ipa`) get uploaded to TestFlight from the workflow.
 4. **iOS signing** is a different beast from Android — uses Apple-managed certificates + provisioning profiles. Apple now offers "automatic signing" which is actually decent; recommend that for v1.
 5. **TestFlight** is the iOS equivalent of Play Store internal testing. Set up testers, run for 1–2 weeks.
 6. **App Store Connect listing** — same shape as Play Store but with Apple's review process layered on top. First-time apps can wait 1–3 weeks (or longer) for first approval. Subsequent updates are usually 24–48 hours.
