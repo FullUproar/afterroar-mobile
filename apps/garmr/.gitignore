@@ -1,0 +1,24 @@
+dist/
+node_modules/
+tsconfig.tsbuildinfo
+
+# Capacitor — generated per machine via `npx cap add android`
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+android/app/debug/
+android/captures/
+android/app/src/main/assets/public/
+
+# Signing
+*.keystore
+*.jks
+keystore.properties
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

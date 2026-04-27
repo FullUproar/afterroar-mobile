@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Afterroar Register</string>
+    <string name="title_activity_main">Afterroar Register</string>
+    <string name="package_name">me.afterroar.register</string>
+    <string name="custom_url_scheme">me.afterroar.register</string>
+</resources>
