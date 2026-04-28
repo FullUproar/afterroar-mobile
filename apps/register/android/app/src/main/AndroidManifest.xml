@@ -38,4 +38,20 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Stripe Terminal Tap-to-Pay-on-Android (Pixel 9 Pro XL demo target):
+         NFC: required for the actual tap-read.
+         ACCESS_FINE_LOCATION: Stripe Terminal SDK requires this even for Tap-to-Pay
+           (used internally for fraud heuristics + reader-discovery hooks).
+         BLUETOOTH_*: not strictly required for TTPA-only, but unblocks pairing
+           a physical reader (e.g. BBPOS WisePOS E for offline card sales) later
+           without another permissions cycle. -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
 </manifest>

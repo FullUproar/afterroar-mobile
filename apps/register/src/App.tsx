@@ -118,6 +118,11 @@ export function App() {
           setStaff(null);
           setView("setup");
         }}
+        onCfgChanged={async () => {
+          const fresh = await getServerConfig();
+          if (fresh) setCfg(fresh);
+          void detectMode(fresh).then(setMode);
+        }}
       />
     );
   }

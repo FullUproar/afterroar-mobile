@@ -1,7 +1,11 @@
 ext {
-    minSdkVersion = 22
+    // Bumped to 30 for Stripe Terminal Tap-to-Pay (requires Android 11+ NFC stack).
+    // The reference demo phone (Pixel 9 Pro XL) is on API 34/35; this only excludes
+    // pre-2020 Android phones, which is acceptable for a POS register.
+    minSdkVersion = 30
     compileSdkVersion = 34
     targetSdkVersion = 34
+    kotlinVersion = '2.0.21'
     androidxActivityVersion = '1.8.0'
     androidxAppCompatVersion = '1.6.1'
     androidxCoordinatorLayoutVersion = '1.2.0'

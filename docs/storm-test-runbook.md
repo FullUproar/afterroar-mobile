@@ -21,7 +21,7 @@ Status indicator on the register tells the cashier which state they're in at eve
 
 2. **Set a PIN on Shawn's pos_staff record** — required because the register login is PIN-based, not Google. From Store Ops on a desktop browser:
    - `/dashboard/staff` → click on Shawn → "Set PIN" → choose 4 digits → save.
-   - The PIN is stored as a SHA-256 hash on `pos_staff.pin_hash`.
+   - The PIN is stored as a bcrypt hash on `pos_staff.pin_hash` (cost 10). The register's Login screen verifies the same way using `bcryptjs` in the WebView.
 
 3. **Bootstrap the register**:
    - Launch the register app on the phone. First-launch screen prompts for API key + store ID.
@@ -37,7 +37,7 @@ Status indicator on the register tells the cashier which state they're in at eve
 
 1. Tap an inventory item. It appears in the cart.
 2. Tap "Cash · $X.XX". Sale completes. Toast says "Sale complete · queued; will appear on dashboard within seconds."
-3. Open `https://www.afterroar.store/dashboard/sales` in a browser. The sale should be visible within 30 seconds.
+3. Open `https://www.afterroar.store/dashboard/cash-flow` (revenue jump) or `/dashboard/inventory` (qty decrement) in a browser. The sale should be visible within 30 seconds.
 4. Settings → "Recent events" should show `cash_sale · APPLIED`.
 
 ## Test 2 — State B (Store Ops down)

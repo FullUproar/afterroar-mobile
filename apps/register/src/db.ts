@@ -51,6 +51,8 @@ async function openNative(): Promise<SQLiteDBConnection> {
       quantity INTEGER NOT NULL,
       sku TEXT,
       category TEXT,
+      barcode TEXT,
+      barcodes_json TEXT,
       synced_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS staff_cache (
@@ -77,6 +79,18 @@ async function openNative(): Promise<SQLiteDBConnection> {
       value TEXT NOT NULL
     );
   `);
+  // Forward-compatible column adds for already-installed devices. SQLite
+  // will throw "duplicate column name" on second runs — swallow.
+  for (const stmt of [
+    `ALTER TABLE inventory_cache ADD COLUMN barcode TEXT`,
+    `ALTER TABLE inventory_cache ADD COLUMN barcodes_json TEXT`,
+  ]) {
+    try {
+      await db.execute(stmt);
+    } catch {
+      // already exists
+    }
+  }
   return db;
 }
 
@@ -121,9 +135,19 @@ export async function replaceInventory(items: InventoryItem[]): Promise<void> {
   await db.execute(`DELETE FROM inventory_cache`);
   for (const i of items) {
     await db.run(
-      `INSERT INTO inventory_cache (id, name, price_cents, quantity, sku, category, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [i.id, i.name, i.priceCents, i.quantity, i.sku ?? null, i.category ?? null, now],
+      `INSERT INTO inventory_cache (id, name, price_cents, quantity, sku, category, barcode, barcodes_json, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        i.id,
+        i.name,
+        i.priceCents,
+        i.quantity,
+        i.sku ?? null,
+        i.category ?? null,
+        i.barcode ?? null,
+        i.barcodes && i.barcodes.length > 0 ? JSON.stringify(i.barcodes) : null,
+        now,
+      ],
     );
   }
 }
@@ -131,8 +155,34 @@ export async function replaceInventory(items: InventoryItem[]): Promise<void> {
 export async function listInventory(): Promise<InventoryItem[]> {
   const db = await ensureDb();
   if (!db) return Array.from(memDb.inventory.values()).sort((a, b) => a.name.localeCompare(b.name));
-  const r = await db.query(`SELECT id, name, price_cents AS priceCents, quantity, sku, category FROM inventory_cache ORDER BY name ASC`);
-  return (r.values ?? []) as InventoryItem[];
+  const r = await db.query(
+    `SELECT id, name, price_cents AS priceCents, quantity, sku, category, barcode, barcodes_json
+     FROM inventory_cache ORDER BY name ASC`,
+  );
+  return (r.values ?? []).map((row: Record<string, unknown>) => {
+    const barcodesJson = row.barcodes_json as string | null;
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      priceCents: row.priceCents as number,
+      quantity: row.quantity as number,
+      sku: (row.sku as string | null) ?? null,
+      category: (row.category as string | null) ?? null,
+      barcode: (row.barcode as string | null) ?? null,
+      barcodes: barcodesJson ? (JSON.parse(barcodesJson) as string[]) : [],
+    };
+  });
+}
+
+/** Lookup an item by exact match against sku, barcode, or any alternate
+ *  barcode. Used by the camera scanner. Returns null if no match. */
+export async function findItemByCode(code: string): Promise<InventoryItem | null> {
+  if (!code) return null;
+  const all = await listInventory();
+  const c = code.trim();
+  return (
+    all.find((i) => i.barcode === c || i.sku === c || (i.barcodes ?? []).includes(c)) ?? null
+  );
 }
 
 /* ------------------------------------------------------------------ */

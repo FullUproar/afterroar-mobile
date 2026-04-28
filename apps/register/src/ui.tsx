@@ -27,7 +27,8 @@ export function Screen({ children, padded = true }: { children: ReactNode; padde
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100dvh",
+        maxHeight: "100dvh",
         background:
           "radial-gradient(ellipse at top, rgba(255, 130, 0, 0.08), transparent 60%), #0a0a0a",
         color: colors.ink,
@@ -35,6 +36,7 @@ export function Screen({ children, padded = true }: { children: ReactNode; padde
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
       {children}

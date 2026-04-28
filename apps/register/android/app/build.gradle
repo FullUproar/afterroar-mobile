@@ -22,6 +22,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // @capacitor-community/stripe-terminal pulls in BouncyCastle through the
+    // Stripe SDK; capacitor-cordova-android-plugins also bundles a copy.
+    // Excluding the duplicate x509 resources fixes the merge conflict.
+    packagingOptions {
+        resources.excludes.add("org/bouncycastle/x509/*")
+    }
 }
 
 repositories {

@@ -8,7 +8,15 @@ import { listAllEvents } from "../db";
 import { onSyncChange, syncOnce, type SyncSnapshot } from "../sync";
 import { fetchBootstrap } from "../api";
 import { replaceInventory, replaceStaff } from "../db";
-import { clearServerConfig } from "../device";
+import {
+  clearServerConfig,
+  setApiBaseUrl,
+  setTaxSettings,
+  setStripePublishableKey,
+  setTapToPayApproved,
+  DEFAULT_API_BASE,
+  SIM_OPS_DOWN_URL,
+} from "../device";
 import { Screen, Card, Button, H1, H2, Muted, Pill, colors } from "../ui";
 import type { ServerConfig, ConnectionMode, RegisterEvent } from "../types";
 
@@ -17,9 +25,10 @@ interface SettingsProps {
   mode: ConnectionMode;
   onBack: () => void;
   onResetDevice: () => void;
+  onCfgChanged: () => void;
 }
 
-export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
+export function Settings({ cfg, mode, onBack, onResetDevice, onCfgChanged }: SettingsProps) {
   const [snapshot, setSnapshot] = useState<SyncSnapshot | null>(null);
   const [events, setEvents] = useState<RegisterEvent[]>([]);
   const [busy, setBusy] = useState<"sync" | "bootstrap" | null>(null);
@@ -47,6 +56,12 @@ export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
       const data = await fetchBootstrap(cfg);
       await replaceInventory(data.inventory);
       await replaceStaff(data.staff);
+      await setTaxSettings({
+        ratePercent: data.store.taxRatePercent,
+        includedInPrice: data.store.taxIncludedInPrice,
+      });
+      await setStripePublishableKey(data.store.stripePublishableKey);
+      await setTapToPayApproved(data.store.tapToPayApproved);
       setBootstrapMsg(`Refreshed: ${data.inventory.length} inventory, ${data.staff.length} staff`);
     } catch (err) {
       setBootstrapMsg(err instanceof Error ? `Failed: ${err.message}` : "Bootstrap failed");
@@ -59,6 +74,12 @@ export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
     if (!confirm("Reset this device? You'll need the API key + store ID again to set it up.")) return;
     await clearServerConfig();
     onResetDevice();
+  }
+
+  const opsDownSim = cfg.apiBaseUrl === SIM_OPS_DOWN_URL;
+  async function toggleOpsDownSim() {
+    await setApiBaseUrl(opsDownSim ? DEFAULT_API_BASE : SIM_OPS_DOWN_URL);
+    onCfgChanged();
   }
 
   const modeColor = mode === "online" ? colors.green : mode === "ops-down" ? colors.amber : colors.red;
@@ -74,8 +95,10 @@ export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
       </button>
       <H1>Settings</H1>
 
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: "0.5rem", paddingRight: "0.25rem" }}>
+
       {/* Connection mode */}
-      <Card style={{ marginTop: "1rem" }}>
+      <Card style={{ marginTop: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <H2>Connection</H2>
@@ -86,6 +109,21 @@ export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
             </Muted>
           </div>
           <Pill color={modeColor}>● {modeLabel}</Pill>
+        </div>
+      </Card>
+
+      {/* Demo / QA: simulate ops-down without touching production */}
+      <Card style={{ marginTop: "0.75rem", borderColor: opsDownSim ? `${colors.amber}80` : colors.rule }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ flex: 1, minWidth: 0, paddingRight: "0.75rem" }}>
+            <H2>Simulate ops down</H2>
+            <Muted style={{ marginTop: "0.25rem" }}>
+              Points the register at a bogus URL. Health probes fail; phone keeps internet. Used for the storm test.
+            </Muted>
+          </div>
+          <Button onClick={toggleOpsDownSim} variant={opsDownSim ? "primary" : "ghost"}>
+            {opsDownSim ? "On" : "Off"}
+          </Button>
         </div>
       </Card>
 
@@ -129,9 +167,9 @@ export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
       </Card>
 
       {/* Recent events */}
-      <Card style={{ marginTop: "0.75rem", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <Card style={{ marginTop: "0.75rem" }}>
         <H2>Recent events</H2>
-        <div style={{ overflowY: "auto", marginTop: "0.5rem", flex: 1, minHeight: 0 }}>
+        <div style={{ marginTop: "0.5rem", maxHeight: "40vh", overflowY: "auto" }}>
           {events.length === 0 ? (
             <Muted>No events yet.</Muted>
           ) : (
@@ -171,6 +209,8 @@ export function Settings({ cfg, mode, onBack, onResetDevice }: SettingsProps) {
           Reset device
         </Button>
       </Card>
+
+      </div>
     </Screen>
   );
 }

@@ -22,6 +22,10 @@ const META_LAMPORT = "lamport_counter";
 const META_API_KEY = "api_key";
 const META_STORE_ID = "store_id";
 const META_API_BASE = "api_base_url";
+const META_TAX_RATE_PERCENT = "tax_rate_percent";
+const META_TAX_INCLUDED = "tax_included_in_price";
+const META_STRIPE_PK = "stripe_publishable_key";
+const META_TTP_APPROVED = "tap_to_pay_approved";
 
 const DEFAULT_API_BASE = "https://www.afterroar.store";
 
@@ -99,4 +103,61 @@ export async function setServerConfig(cfg: { apiKey: string; storeId: string; ap
 export async function clearServerConfig(): Promise<void> {
   await metaSet(META_API_KEY, "");
   await metaSet(META_STORE_ID, "");
+}
+
+/** Override or restore the API base URL. Used by the "Simulate ops down" demo
+ *  toggle: passing the SIM_OPS_DOWN_URL forces health probes to fail without
+ *  taking the phone off the network, which is what state B looks like. */
+export const SIM_OPS_DOWN_URL = "https://ops-down.example.invalid";
+
+export async function setApiBaseUrl(url: string): Promise<void> {
+  await metaSet(META_API_BASE, url);
+}
+
+export async function getApiBaseUrl(): Promise<string> {
+  return (await metaGet(META_API_BASE)) ?? DEFAULT_API_BASE;
+}
+
+export { DEFAULT_API_BASE };
+
+/* ------------------------------------------------------------------ */
+/*  Store tax settings (refreshed on each bootstrap)                    */
+/* ------------------------------------------------------------------ */
+
+export interface TaxSettings {
+  ratePercent: number;       // e.g. 8.25 for 8.25%
+  includedInPrice: boolean;  // when true, no separate tax line
+}
+
+export async function setTaxSettings(s: TaxSettings): Promise<void> {
+  await metaSet(META_TAX_RATE_PERCENT, String(s.ratePercent));
+  await metaSet(META_TAX_INCLUDED, s.includedInPrice ? "1" : "0");
+}
+
+export async function getTaxSettings(): Promise<TaxSettings> {
+  const [rateStr, incStr] = await Promise.all([
+    metaGet(META_TAX_RATE_PERCENT),
+    metaGet(META_TAX_INCLUDED),
+  ]);
+  return {
+    ratePercent: rateStr ? parseFloat(rateStr) || 0 : 0,
+    includedInPrice: incStr === "1",
+  };
+}
+
+export async function setStripePublishableKey(key: string | null): Promise<void> {
+  await metaSet(META_STRIPE_PK, key ?? "");
+}
+
+export async function getStripePublishableKey(): Promise<string | null> {
+  const v = await metaGet(META_STRIPE_PK);
+  return v ? v : null;
+}
+
+export async function setTapToPayApproved(approved: boolean): Promise<void> {
+  await metaSet(META_TTP_APPROVED, approved ? "1" : "0");
+}
+
+export async function getTapToPayApproved(): Promise<boolean> {
+  return (await metaGet(META_TTP_APPROVED)) === "1";
 }

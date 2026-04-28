@@ -2,24 +2,15 @@
  * PIN keypad login. Cashier picks their name, enters PIN, the local
  * staff_cache pin_hash is checked offline.
  *
- * For demo, PIN check is a simple SHA-256 comparison (the same hash format
- * the existing pos_staff.pin_hash column uses for register PINs in the
- * /clock flow). Real cryptographic key-stretching is overkill for a 4-digit
- * PIN that only protects who-rang-this-up audit, not money.
+ * Hash format must match Store Ops' /api/clock PATCH (apps/ops):
+ * bcryptjs at cost 10. bcryptjs is pure-JS so it runs in the WebView.
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { compare as bcryptCompare } from "bcryptjs";
 import { listStaff } from "../db";
 import { Screen, Card, H1, Muted, colors } from "../ui";
 import type { Staff } from "../types";
-
-async function sha256Hex(s: string): Promise<string> {
-  const buf = new TextEncoder().encode(s);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 export function Login({ onSignedIn }: { onSignedIn: (staff: Staff) => void }) {
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -36,10 +27,10 @@ export function Login({ onSignedIn }: { onSignedIn: (staff: Staff) => void }) {
   async function tryPin(nextPin: string) {
     setPin(nextPin);
     setError(null);
-    if (!selected) return;
+    if (!selected || !selected.pinHash) return;
     if (nextPin.length < 4) return;
-    const hash = await sha256Hex(nextPin);
-    if (hash === selected.pinHash) {
+    const ok = await bcryptCompare(nextPin, selected.pinHash);
+    if (ok) {
       onSignedIn(selected);
       return;
     }
